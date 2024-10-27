@@ -17,9 +17,11 @@
 
   
 ### Главная страница
-![image](https://github.com/user-attachments/assets/681f3b1f-d991-40d5-a48e-052122852338)
+![image](https://github.com/user-attachments/assets/e0e11459-d3a4-4c3f-8264-7ac1b740f8b0)
+
 ### Страница галерея
-![image](https://github.com/user-attachments/assets/38c0187a-8aee-4eaf-aed7-7b8a414f581a)
+![image](https://github.com/user-attachments/assets/85fe5657-275d-4184-a53c-2bf0b74a6064)
+
 
 ## Требования
 - Docker версии выше 25.0
@@ -43,6 +45,7 @@ docker-compose up -d --build
 
 
 ## Архитектура проекта
-![schema](https://github.com/user-attachments/assets/76738f75-c23e-4cc6-a015-403ef0ff1ed7)
+![image](https://github.com/user-attachments/assets/59c26986-5129-4ee0-b436-111aba37014f)
+
 
 
