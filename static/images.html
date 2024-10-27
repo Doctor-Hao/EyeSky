@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Gallery</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+
+        #image-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .image-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        img {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        img:hover {
+            transform: scale(1.05);
+        }
+
+        #pagination {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 0 5px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .image-info {
+            margin-top: 5px;
+            text-align: center;
+        }
+
+        #pagination-info {
+            margin: 0 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Image Gallery</h1>
+    <div id="image-container"></div>
+    <div id="pagination">
+        <button id="prev-page">Назад</button>
+        <div id="pagination-info"></div>
+        <button id="next-page">Вперед</button>
+    </div>
+
+    <script>
+        const socket = new WebSocket(`ws://${window.location.host}/ws/images`);
+        let currentPage = 1;
+        const imagesPerPage = 10;
+        let totalImages = 0;  // Счетчик общего количества изображений
+
+        // Когда подключение открыто
+        socket.addEventListener('open', function (event) {
+            console.log('WebSocket connection established');
+            // Отправляем запрос на получение изображений
+            socket.send(JSON.stringify({ page: currentPage, per_page: imagesPerPage }));
+        });
+
+        // Обработка входящих сообщений
+        socket.addEventListener('message', function (event) {
+            const response = JSON.parse(event.data);
+            console.log('Received data:', response);
+
+            // Проверяем, пришло ли новое изображение
+            if (response.new_image) {
+                // Обработка нового изображения
+                addNewImage(response.new_image);
+            } else {
+                // Обновляем интерфейс с полученными изображениями
+                updateImageGallery(response.images, response.total, response.page, response.per_page);
+            }
+        });
+
+        function updateImageGallery(images, total, page, perPage) {
+            totalImages = total;  // Обновляем общее количество изображений
+            const imageContainer = document.getElementById('image-container');
+            imageContainer.innerHTML = '';  // Очищаем предыдущие изображения
+
+            images.forEach(image => {
+                const imgWrapper = document.createElement('div');
+                imgWrapper.className = 'image-wrapper';
+
+                const imgElement = document.createElement('img');
+                imgElement.src = `data:image/jpeg;base64,${image.image}`;
+                imgElement.alt = `Predicted: ${image.category_type}`;
+                imgElement.style.width = '100px';  // Установите желаемый размер
+                imgElement.style.margin = '5px';
+
+                // Добавьте обработчик клика для отображения детальной информации
+                imgElement.addEventListener('click', function () {
+                    alert(`Image ID: ${image.id}\nPredicted Class: ${image.category_type}`);
+                });
+
+                const infoElement = document.createElement('div');
+                infoElement.className = 'image-info';
+                infoElement.innerHTML = `
+                    <strong>Дата:</strong> ${new Date(image.date).toLocaleString()}<br>
+                    <strong>Уникальное имя:</strong> ${image.unique_name_image}<br>
+                    <strong>Результат предикта:</strong> ${image.category_type}
+                `;
+
+                imgWrapper.appendChild(imgElement);
+                imgWrapper.appendChild(infoElement);
+                imageContainer.appendChild(imgWrapper);
+            });
+
+            // Обновление информации о пагинации
+            updatePagination(totalImages, page, perPage);
+        }
+
+        function addNewImage(newImage) {
+            const imageContainer = document.getElementById('image-container');
+
+            // Проверяем, превышает ли общее количество изображений лимит
+            if (totalImages < imagesPerPage) {
+                const imgWrapper = document.createElement('div');
+                imgWrapper.className = 'image-wrapper';
+
+                const imgElement = document.createElement('img');
+                imgElement.src = `data:image/jpeg;base64,${newImage.image}`;
+                imgElement.alt = `Predicted: ${newImage.category_type}`;
+                imgElement.style.width = '100px';  // Установите желаемый размер
+                imgElement.style.margin = '5px';
+
+                imgElement.addEventListener('click', function () {
+                    alert(`Image ID: ${newImage.id}\nPredicted Class: ${newImage.category_type}`);
+                });
+
+                const infoElement = document.createElement('div');
+                infoElement.className = 'image-info';
+                infoElement.innerHTML = `
+                    <strong>Дата:</strong> ${new Date(newImage.date).toLocaleString()}<br>
+                    <strong>Уникальное имя:</strong> ${newImage.unique_name_image}<br>
+                    <strong>Результат предикта:</strong> ${newImage.category_type}
+                `;
+
+                imgWrapper.appendChild(imgElement);
+                imgWrapper.appendChild(infoElement);
+                imageContainer.appendChild(imgWrapper); // Добавляем новое изображение в конец
+                totalImages++;  // Увеличиваем счетчик общего количества изображений
+            }
+        }
+
+        function updatePagination(total, page, perPage) {
+            const paginationInfo = document.getElementById('pagination-info');
+            paginationInfo.textContent = `Страница ${page} из ${Math.ceil(total / perPage)} (${total} изображений всего)`;
+        }
+
+        // Добавьте обработчики для переключения страниц
+        document.getElementById('next-page').addEventListener('click', function () {
+            const maxPages = Math.ceil(totalImages / imagesPerPage);
+            if (currentPage < maxPages) {
+                currentPage++;
+                socket.send(JSON.stringify({ page: currentPage, per_page: imagesPerPage }));
+            }
+        });
+
+        document.getElementById('prev-page').addEventListener('click', function () {
+            if (currentPage > 1) {
+                currentPage--;
+                socket.send(JSON.stringify({ page: currentPage, per_page: imagesPerPage }));
+            }
+        });
+    </script>
+</body>
+
+</html>
