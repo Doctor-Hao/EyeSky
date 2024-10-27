@@ -16,11 +16,11 @@ services:
       retries: 5
     restart: always
 
-  redis:
-    image: redis
-    ports:
-      - 6379:6379
-    restart: always
+  # redis:
+  #   image: redis
+  #   ports:
+  #     - 6379:6379
+  #   restart: always
 
   nginx:
     build:
@@ -79,17 +79,44 @@ services:
       KAFKA_ADVERTISED_HOST_NAME: kafka:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-    command: >
-      bash -c "
-        # Запускаем Kafka как обычно
-        /etc/confluent/docker/run
+    # volumes:
+    #   - ./kafka-data:/var/lib/kafka/data
 
+  kafka_init:
+    image: 'confluentinc/cp-kafka:7.0.1'
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_ADVERTISED_HOST_NAME: kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+    entrypoint: >
+      bash -c "
         # Ожидаем запуска Kafka
-        while ! nc -z kafka 9092; do sleep 1; done;
+        while ! kafka-topics --bootstrap-server kafka:9092 --list; do
+          echo 'Waiting for Kafka to be ready...';
+          sleep 5;
+        done;
         
         # Создаем топик после запуска
-        kafka-topics --create --topic frames --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1;
-        kafka-topics --create --topic healthcheck --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1;
+        if ! kafka-topics --bootstrap-server kafka:9092 --describe --topic frames > /dev/null 2>&1; then
+          kafka-topics --create --topic frames --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1;
+          echo 'Topic frames created';
+        else
+          echo 'Topic frames already exists';
+        fi;
+
+        # Проверяем и создаем топик 'healthcheck', если он не существует
+        if ! kafka-topics --bootstrap-server kafka:9092 --describe --topic healthcheck > /dev/null 2>&1; then
+          kafka-topics --create --topic healthcheck --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1;
+          echo 'Topic healthcheck created';
+        else
+          echo 'Topic healthcheck already exists';
+        fi;
       "
     # volumes:
     #   - ./kafka-data:/var/lib/kafka/data
@@ -97,12 +124,12 @@ services:
   minio:
     image: minio/minio:RELEASE.2024-10-13T13-34-11Z-cpuv1
     ports:
-      - '9000:9000' # порт для API
-      - '9001:9001' # порт для консоли
+      - '9000:9000'
+      - '9001:9001'
     restart: always
     environment:
-      MINIO_ROOT_USER: minioadmin # замените на ваш доступ
-      MINIO_ROOT_PASSWORD: minioadmin # замените на ваш пароль
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
     command: server /data --console-address ":9001"
     # volumes:
     #   - minio_data:/data
@@ -111,7 +138,19 @@ services:
     image: minio/minio:RELEASE.2024-10-13T13-34-11Z-cpuv1
     depends_on:
       - minio
-    entrypoint: /bin/bash
-    command: ['-c', 'chmod +x /opt/init_minio.sh && /opt/init_minio.sh']
-    volumes:
-      - ./docker/init_minio.sh:/opt/init_minio.sh
+    entrypoint: >
+      bash -c "
+        # Wait for MinIO server to start
+        until /usr/bin/mc alias set minio http://minio:9000 minioadmin minioadmin; do
+          echo 'Waiting for MinIO server...'
+          sleep 2
+        done
+
+        # Check if the bucket exists, create it only if it doesn't
+        if ! /usr/bin/mc ls minio/frames > /dev/null 2>&1; then
+          /usr/bin/mc mb minio/frames
+        fi
+
+        # Set public policy for the frames bucket
+        /usr/bin/mc anonymous set public minio/frames
+      "

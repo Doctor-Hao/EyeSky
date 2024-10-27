@@ -87,7 +87,6 @@ const startSendingFrames = async () => {
   if (videoFile.value) {
     video.value.play();
   } else {
-    console.log("selectedCamera.value", selectedCamera.value)
     const constraints = {
       video: {deviceId: selectedCamera.value, frameRate: 24},
     };

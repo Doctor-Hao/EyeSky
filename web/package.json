@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
-    "@mjackson/multipart-parser": "^0.6.3",
     "axios": "^1.7.7",
     "gifshot": "^0.4.5",
     "vite-plugin-vuetify": "^2.0.4",

@@ -19,7 +19,7 @@
     </v-main>
 
     <v-footer app class="d-flex justify-end" color="surface">
-      <v-col class="text-center">&copy; 2024 Drone Security "EyeSky"</v-col>
+      <v-col class="text-right">&copy; 2024 Drone Security "EyesSky"</v-col>
     </v-footer>
   </v-app>
 </template>

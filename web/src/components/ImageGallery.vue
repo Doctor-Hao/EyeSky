@@ -18,7 +18,7 @@
     <div v-if="predictions.length === 0">No predictions found</div>
     <v-row class="justify-center">
       <v-col cols="12" md="3" lg="2" v-for="(prediction, index) in displayedPredictions" :key="index">
-        <v-card :color="'surface'" outlined>
+        <v-card min-width="200px" :color="'surface'" outlined>
           <v-img
             :src="prediction.gif"
             height="200px"
@@ -63,20 +63,18 @@ const uniqueCategories = computed(() => {
 // Function to fetch predictions from the server
 const fetchPredictions = async () => {
   try {
-    const response = await axios.get(`http://localhost:80/api/all?page=${page.value}&limit=${limit.value}`);
-    
-    // Ensure response structure is valid before using it
+    const response = await axios.get(`http://localhost:80/api/images?page=${page.value}&limit=${limit.value}`);
+
     if (response.data && response.data.predictions) {
       predictions.value = await Promise.all(response.data.predictions.map(formatPrediction));
-      totalPages.value = response.data.total_pages; // Make sure total_pages exists
-      filterPredictions(); // Apply filtering after fetching
+      totalPages.value = response.data.total_pages;
+      filterPredictions(); 
     }
   } catch (error) {
     console.error("Error fetching predictions:", error);
   }
 };
 
-// Format each prediction
 const formatPrediction = async (prediction) => {
   return {
     gif: await createGifUrl(prediction.images),
@@ -90,18 +88,16 @@ const createGifUrl = async (images) => {
   return createGifBlob(gifImages);
 };
 
-// Fetch images via HTTP request
 const fetchImageBlob = async (image) => {
   try {
     const response = await axios.get(`http://localhost:80/s3/frames/${image.uid}.jpg`, {
-      responseType: 'blob', // Fetch image as Blob
+      responseType: 'blob',
     });
 
     if (response.status !== 200) {
       throw new Error(`Failed to load image: ${response.status}`);
     }
 
-    // Check for empty Blob
     if (response.data.size === 0) {
       throw new Error("Received an empty blob");
     }
@@ -110,7 +106,7 @@ const fetchImageBlob = async (image) => {
     return response.data;
   } catch (error) {
     console.error("Error fetching image blob:", error);
-    throw error; // Propagate error
+    throw error;
   }
 };
 
@@ -122,21 +118,20 @@ const createGifBlob = async (imageBlobs) => {
         images: imageBlobs.map((blob) => URL.createObjectURL(blob)),
         gifWidth: 224,
         gifHeight: 224,
-        interval: 0, // Set interval to 0 for no delay between frames
+        interval: 0, // delay between frames
         numFrames: imageBlobs.length,
       },
       (obj) => {
         if (!obj.error) {
-          resolve(obj.image); // Returns the base64-encoded GIF
+          resolve(obj.image); 
         } else {
-          reject(obj.error); // Handle errors if GIF creation fails
+          reject(obj.error);
         }
       }
     );
   });
 };
 
-// Filter predictions based on the selected category
 const filterPredictions = () => {
   if (selectedCategory.value && selectedCategory.value !== 'Все') {
     filteredPredictions.value = predictions.value.filter(prediction => prediction.category_type === selectedCategory.value);
@@ -145,15 +140,13 @@ const filterPredictions = () => {
   }
 };
 
-// Update page and fetch new predictions
 const updatePage = async (newPage) => {
-  if (newPage > 0 && newPage <= totalPages.value) { // Ensure newPage is valid
+  if (newPage > 0 && newPage <= totalPages.value) { 
     page.value = newPage;
     await fetchPredictions();
   }
 };
 
-// Fetch predictions when component is mounted
 onMounted(fetchPredictions);
 </script>
 

@@ -1,27 +1,26 @@
-# Дроный
+# Проект Дроны
 
-## Docker
-1. Redis
-2. Nginx
+## Требования
+- Docker версии выше 25.0
 
-## Python
-**Запускает нативно**
+## Компоненты
+- Python
+- Vue3
+- Minio
+- Kafka
+- Nginx
 
----
-### Пример команд для первого запуска
-1. Пример для UNIX:
-```[bash]
-docker compose -f docker-compose.yaml up -d && \
-    pip3 install -r requirements.txt && \
-    source ~/.venv/bin/activate && \
-    python3 main.py
+## Запуск проекта
+1. Для запуска проекта используйте следующую команду:
+
 ```
-
-2. Пример для Windows:
-```[bash]
-docker compose up -d && \
-python -m venv .venv && \
-. .venv/Scripts/activate && \
-pip install -r requirements.txt && \
-python main.py
+docker compose up -d --build
+# ИЛИ
+docker-compose up -d --build
 ```
+2. Откройте в браузере http://localhost
+
+
+## Схема взаимодействия
+![Схема взаимодействия компонентов](docs/img/schema.png)
+
